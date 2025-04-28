@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  api:
+    build: 
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/brickify
+      - JWT_SECRET=your_jwt_secret
+      - STORAGE_PATH=/app/storage
+    volumes:
+      - api_storage:/app/storage
+    depends_on:
+      - db
+
+  ai_service:
+    build:
+      context: ./ai_service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - STORAGE_PATH=/app/storage
+      - DEVICE=cuda
+      - MAX_MEMORY_MB=4096
+    volumes:
+      - ai_storage:/app/storage
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=brickify
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  api_storage:
+  ai_storage:
+  postgres_data: 

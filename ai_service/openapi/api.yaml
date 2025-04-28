@@ -1,0 +1,273 @@
+openapi: 3.0.0
+info:
+  title: Brickify AI Service API
+  description: |
+    API pour la conversion de modèles 3D en LEGO.
+    
+    Cette API permet de :
+    - Convertir des modèles 3D en instructions LEGO
+    - Optimiser la stabilité et les couleurs
+    - Gérer le cache des conversions
+    - Obtenir des informations sur les formats supportés
+  version: 1.0.0
+  contact:
+    name: Brickify Team
+    
+servers:
+  - url: http://localhost:8001
+    description: Serveur de développement
+    
+paths:
+  /api/convert:
+    post:
+      summary: Convertit un modèle 3D en LEGO
+      description: |
+        Prend un fichier 3D en entrée et retourne les instructions pour le construire en LEGO.
+        Le résultat inclut la disposition des briques, les statistiques et les instructions de montage.
+      operationId: convertModel
+      tags:
+        - Conversion
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Fichier modèle 3D
+                voxel_resolution:
+                  type: integer
+                  minimum: 8
+                  maximum: 128
+                  default: 32
+                  description: Résolution de la grille de voxels
+                optimize_stability:
+                  type: boolean
+                  default: true
+                  description: Optimiser la stabilité de la construction
+                optimize_colors:
+                  type: boolean
+                  default: true
+                  description: Optimiser les couleurs des briques
+      responses:
+        '200':
+          description: Conversion réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversionResult'
+        '400':
+          description: Format de fichier non supporté
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Erreur interne
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
+  /api/formats:
+    get:
+      summary: Liste les formats de fichiers supportés
+      description: Retourne la liste des formats de fichiers 3D supportés par l'API
+      operationId: getSupportedFormats
+      tags:
+        - Informations
+      responses:
+        '200':
+          description: Liste des formats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  formats:
+                    type: array
+                    items:
+                      type: string
+                    example: [".obj", ".stl", ".ply"]
+                  total:
+                    type: integer
+                    description: Nombre total de formats supportés
+                    
+  /api/cache/stats:
+    get:
+      summary: Statistiques du cache
+      description: Retourne des statistiques sur l'utilisation du cache
+      operationId: getCacheStats
+      tags:
+        - Cache
+      responses:
+        '200':
+          description: Statistiques du cache
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheStats'
+                
+  /api/cache/cleanup:
+    post:
+      summary: Nettoie le cache
+      description: Supprime les entrées expirées du cache
+      operationId: cleanupCache
+      tags:
+        - Cache
+      responses:
+        '200':
+          description: Nettoyage réussi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [success]
+                  message:
+                    type: string
+                    
+  /health:
+    get:
+      summary: État du service
+      description: Vérifie l'état du service et la disponibilité du GPU
+      operationId: healthCheck
+      tags:
+        - Système
+      responses:
+        '200':
+          description: État du service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+                
+components:
+  schemas:
+    ConversionResult:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        model_info:
+          type: object
+          properties:
+            voxel_resolution:
+              type: integer
+              description: Résolution utilisée pour la voxelisation
+            brick_count:
+              type: integer
+              description: Nombre total de briques
+            dimensions:
+              type: object
+              properties:
+                width:
+                  type: number
+                height:
+                  type: number
+                depth:
+                  type: number
+            stability_score:
+              type: number
+              description: Score de stabilité (0-1)
+            brick_types:
+              type: object
+              additionalProperties:
+                type: integer
+              description: Nombre de briques par type
+        instructions:
+          type: array
+          items:
+            $ref: '#/components/schemas/BuildingStep'
+        device:
+          type: string
+          description: Dispositif utilisé pour le calcul
+        cuda_available:
+          type: boolean
+          description: Disponibilité du GPU
+          
+    BuildingStep:
+      type: object
+      properties:
+        layer:
+          type: integer
+          description: Numéro de la couche
+        bricks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Brick'
+        tips:
+          type: array
+          items:
+            type: string
+          description: Conseils de construction
+          
+    Brick:
+      type: object
+      properties:
+        position:
+          type: array
+          items:
+            type: integer
+          minItems: 3
+          maxItems: 3
+          description: Position (x, y, z)
+        size:
+          type: array
+          items:
+            type: integer
+          minItems: 3
+          maxItems: 3
+          description: Dimensions (largeur, longueur, hauteur)
+        color:
+          type: array
+          items:
+            type: number
+          minItems: 3
+          maxItems: 3
+          description: Couleur RGB
+        stability_score:
+          type: number
+          description: Score de stabilité individuel
+          
+    CacheStats:
+      type: object
+      properties:
+        total_entries:
+          type: integer
+          description: Nombre total d'entrées en cache
+        total_size_mb:
+          type: number
+          description: Taille totale du cache en Mo
+        cache_dir:
+          type: string
+          description: Répertoire du cache
+        max_age_days:
+          type: integer
+          description: Durée de vie maximale des entrées
+          
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        gpu:
+          type: boolean
+          description: Disponibilité du GPU
+        device:
+          type: string
+          description: Type de dispositif utilisé
+          
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: Description de l'erreur 

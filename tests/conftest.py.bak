@@ -1,0 +1,15 @@
+import pytest
+from fastapi.testclient import TestClient
+from app.main import app
+
+@pytest.fixture
+def client():
+    """
+    Fixture qui fournit un client de test pour l'API
+    """
+    return TestClient(app)
+
+# Configuration minimale pour les tests
+@pytest.fixture
+def test_app():
+    return None  # Pas besoin de l'application pour les tests isolés 
