@@ -7,19 +7,11 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
-    scaling:
-      minInstances: 1
-      maxInstances: 2
-      targetMemoryPercent: 70
 
   - type: web
     name: brickify-ai
     env: docker
     dockerfilePath: Dockerfile
-    scaling:
-      minInstances: 1
-      maxInstances: 2
-      targetMemoryPercent: 70
     envVars:
       - key: PORT
         value: 8001
