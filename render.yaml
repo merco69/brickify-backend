@@ -2,7 +2,20 @@ services:
   - type: web
     name: brickify-api
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      apt-get update && apt-get install -y \
+        build-essential \
+        python3-dev \
+        cmake \
+        libgl1-mesa-dev \
+        libglu1-mesa-dev \
+        libegl1-mesa-dev \
+        libxrandr-dev \
+        libxinerama-dev \
+        libxcursor-dev \
+        libxi-dev
+      pip install --upgrade pip
+      pip install -r backend/requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
@@ -15,7 +28,7 @@ services:
   - type: web
     name: brickify-ai
     env: docker
-    dockerfilePath: Dockerfile
+    dockerfilePath: ai_service/Dockerfile
     envVars:
       - key: PORT
         value: 8001
